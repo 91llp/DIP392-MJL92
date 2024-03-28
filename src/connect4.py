@@ -109,7 +109,7 @@ while not game_over:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            sys.exit()
+            pygame.quit()
 
         if event.type == pygame.MOUSEMOTION:
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
@@ -159,4 +159,5 @@ while not game_over:
             turn = turn % 2
 
             if game_over:
-                pygame.time.wait(3000)
+                pygame.time.wait(1000)
+                pygame.quit()
