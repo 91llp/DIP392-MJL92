@@ -7,6 +7,8 @@ BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
+DARK_BLUE = (0, 0, 139)
+LIGHT_BLUE = (173, 216, 230)
 
 ROW_COUNT = 6
 COLUMN_COUNT = 7
@@ -68,18 +70,19 @@ def winning_move(board, piece):
 def draw_board(board):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (
-            int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+            color = LIGHT_BLUE if (r + c) % 2 == 0 else DARK_BLUE
+            pygame.draw.rect(screen, color, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
+            pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
 
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             if board[r][c] == 1:
-                pygame.draw.circle(screen, RED, (
-                int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
             elif board[r][c] == 2:
-                pygame.draw.circle(screen, YELLOW, (
-                int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                # Dessiner un pion jaune avec une bordure noire
+                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
     pygame.display.update()
 
 
@@ -133,7 +136,7 @@ while not game_over:
                     drop_piece(board, row, col, 1)
 
                     if winning_move(board, 1):
-                        label = myfont.render("Player 1 wins!!", 1, RED)
+                        label = myfont.render("Player 1 wins", 1, RED)
                         screen.blit(label, (40, 10))
                         game_over = True
 
@@ -148,7 +151,7 @@ while not game_over:
                     drop_piece(board, row, col, 2)
 
                     if winning_move(board, 2):
-                        label = myfont.render("Player 2 wins!!", 1, YELLOW)
+                        label = myfont.render("Player 2 wins", 1, YELLOW)
                         screen.blit(label, (40, 10))
                         game_over = True
 
