@@ -1,153 +1,79 @@
+import tkinter as tk
 import numpy as np
-import pygame
-import sys
-import math
 
-# Couleurs
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-DARK_BLUE = (0, 0, 139)
-LIGHT_BLUE = (173, 216, 230)
+class Puissance4:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Configuration de Puissance 4")
 
-ROW_COUNT = 6
-COLUMN_COUNT = 7
-SQUARESIZE = 100
+        # Initialiser les paramètres de jeu
+        self.rows = 6
+        self.columns = 7
+        self.player1_name = "Joueur 1"
+        self.player2_name = "Joueur 2"
 
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT + 1) * SQUARESIZE
-size = (width, height)
+        # Créer des widgets pour la configuration
+        tk.Label(self.master, text="Nombre de colonnes:").grid(row=0, column=0)
+        self.columns_entry = tk.Entry(self.master)
+        self.columns_entry.grid(row=0, column=1)
 
-RADIUS = int(SQUARESIZE / 2 - 5)
+        tk.Label(self.master, text="Nom du joueur 1:").grid(row=1, column=0)
+        self.player1_entry = tk.Entry(self.master)
+        self.player1_entry.grid(row=1, column=1)
 
-# Initialiser Pygame
-pygame.init()
+        tk.Label(self.master, text="Nom du joueur 2:").grid(row=2, column=0)
+        self.player2_entry = tk.Entry(self.master)
+        self.player2_entry.grid(row=2, column=1)
 
-screen = pygame.display.set_mode(size)
-myfont = pygame.font.SysFont("monospace", 75)
+        tk.Button(self.master, text="Commencer le jeu", command=self.start_game).grid(row=3, columnspan=2)
 
-def create_board():
-    board = np.zeros((ROW_COUNT, COLUMN_COUNT))
-    return board
+    def start_game(self):
+        # Récupérer les configurations
+        self.columns = int(self.columns_entry.get())
+        self.player1_name = self.player1_entry.get()
+        self.player2_name = self.player2_entry.get()
 
-def drop_piece(board, row, col, piece):
-    board[row][col] = piece
+        # Créer et afficher la fenêtre de jeu
+        game_window = tk.Toplevel(self.master)
+        game_window.title("Puissance 4")
+        self.game = GameBoard(game_window, self.rows, self.columns, self.player1_name, self.player2_name)
 
-def is_valid_location(board, col):
-    return board[ROW_COUNT - 1][col] == 0
+class GameBoard:
+    def __init__(self, master, rows, columns, player1_name, player2_name):
+        self.master = master
+        self.rows = rows
+        self.columns = columns
+        self.player1_name = player1_name
+        self.player2_name = player2_name
+        self.turn = 1
 
-def get_next_open_row(board, col):
-    for r in range(ROW_COUNT):
-        if board[r][col] == 0:
-            return r
+        # Initialiser la grille de jeu
+        self.grid = np.zeros((self.rows, self.columns), dtype=int)
 
-def print_board(board):
-    print(np.flip(board, 0))
+        # Créer des boutons pour chaque colonne
+        self.buttons = [tk.Button(self.master, text=f"Colonne {i+1}", command=lambda c=i: self.play(c)) for i in range(self.columns)]
+        for i, button in enumerate(self.buttons):
+            button.grid(row=0, column=i)
 
-def winning_move(board, piece):
-    # Check horizontal locations for win
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT):
-            if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][c + 3] == piece:
-                return True
+        # Affichage de la grille du jeu
+        self.labels = [[tk.Label(self.master, text=' ', width=12, height=2, relief="ridge", bg='light grey') for _ in range(self.columns)] for _ in range(self.rows)]
+        for r in range(self.rows):
+            for c in range(self.columns):
+                self.labels[r][c].grid(row=r+1, column=c)
 
-    # Check vertical locations for win
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][c] == piece:
-                return True
+    def play(self, column):
+        # Ajouter le jeton dans la grille
+        for row in range(self.rows-1, -1, -1):
+            if self.grid[row][column] == 0:
+                self.grid[row][column] = self.turn
+                self.labels[row][column].config(text='X' if self.turn == 1 else 'O')
+                self.turn = 3 - self.turn
+                break
 
-    # Check positively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and board[r + 3][c + 3] == piece:
-                return True
+def main():
+    root = tk.Tk()
+    app = Puissance4(root)
+    root.mainloop()
 
-    # Check negatively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(3, ROW_COUNT):
-            if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and board[r - 3][c + 3] == piece:
-                return True
-
-def draw_board(board):
-    screen.fill(BLACK)  # Arrière-plan noir
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            # Dessiner les cases avec un dégradé de bleu
-            color = LIGHT_BLUE if (r + c) % 2 == 0 else DARK_BLUE
-            pygame.draw.rect(screen, color, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            if board[r][c] == 1:
-                # Dessiner un pion rouge avec une bordure noire
-                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
-            elif board[r][c] == 2:
-                # Dessiner un pion jaune avec une bordure noire
-                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
-    pygame.display.update()
-
-def is_board_full(board):
-    for c in range(COLUMN_COUNT):
-        if is_valid_location(board, c):
-            return False
-    return True
-
-board = create_board()
-print_board(board)
-game_over = False
-turn = 0
-
-draw_board(board)
-pygame.display.update()
-
-while not game_over:
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-
-        if event.type == pygame.MOUSEMOTION:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            posx = event.pos[0]
-            if turn == 0:
-                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
-            else:
-                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
-        pygame.display.update()
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            posx = event.pos[0]
-            col = int(math.floor(posx / SQUARESIZE))
-
-            if is_valid_location(board, col):
-                row = get_next_open_row(board, col)
-                drop_piece(board, row, col, turn + 1)
-
-                if winning_move(board, turn + 1):
-                    label = myfont.render(f"Player {turn + 1} wins!!", 1, RED if turn == 0 else YELLOW)
-                    screen.blit(label, (40, 10))
-                    game_over = True
-
-                print_board(board)
-                draw_board(board)
-
-                turn += 1
-                turn = turn % 2
-
-                if not game_over and is_board_full(board):
-                    label = myfont.render("Game is a draw!", 1, BLUE)
-                    screen.blit(label, (40, 10))
-                    game_over = True
-
-                if game_over:
-                    pygame.time.wait(3000)
-                    pygame.quit()
-                    sys.exit()
-
+if __name__ == "__main__":
+    main()
