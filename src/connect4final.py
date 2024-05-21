@@ -1,9 +1,10 @@
 import tkinter as tk
-from tkinter import colorchooser, messagebox
+from tkinter import colorchooser, messagebox, simpledialog
 import numpy as np
 import pygame
 import sys
 import math
+import threading
 
 class ConnectFourSetup:
     def __init__(self, master):
@@ -122,28 +123,19 @@ class ConnectFourGame:
                                 self.display_message("Draw!")
 
     def prompt_restart(self):
-        message_font = pygame.font.SysFont("monospace", 50)
-        message_text = message_font.render("Play again? Click to continue.", True, (255, 255, 255))
-        self.screen.blit(message_text, (50, self.height // 2))
-        pygame.display.update()
+        self.game_over = True  # Ensure no further moves can be made
+        result = messagebox.askyesno("Game Over", "Would you like to play again?")
+        if result:
+            self.restart_game()
+        else:
+            pygame.quit()
+            sys.exit()
 
-        waiting_for_input = True
-        while waiting_for_input:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    # Reset the game
-                    self.board = self.create_board()
-                    self.game_over = False
-                    self.turn = 0
-                    self.draw_board()
-                    waiting_for_input = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
+    def restart_game(self):
+        self.board = np.zeros((self.rows, self.columns))
+        self.game_over = False
+        self.turn = 0
+        self.draw_board()
 
     def is_valid_location(self, col):
         return self.board[self.rows-1][col] == 0
