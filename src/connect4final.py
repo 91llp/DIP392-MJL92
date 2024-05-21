@@ -3,152 +3,113 @@ import pygame
 import sys
 import math
 
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-DARK_BLUE = (0, 0, 139)
-LIGHT_BLUE = (173, 216, 230)
-
-ROW_COUNT = 6
-COLUMN_COUNT = 7
-
-def create_board():
-    board = np.zeros((ROW_COUNT, COLUMN_COUNT))
-    return board
+def create_board(rows, columns):
+    return np.zeros((rows, columns))
 
 def drop_piece(board, row, col, piece):
     board[row][col] = piece
 
 def is_valid_location(board, col):
-    return board[ROW_COUNT - 1][col] == 0
+    return board[-1][col] == 0
 
 def get_next_open_row(board, col):
-    for r in range(ROW_COUNT):
+    for r in range(board.shape[0]):
         if board[r][col] == 0:
             return r
+    return None
 
 def print_board(board):
     print(np.flip(board, 0))
 
 def winning_move(board, piece):
-    # Check horizontal locations for win
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT):
-            if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][c + 3] == piece:
+    # Horizontal, vertical, and diagonal checks
+    rows, cols = board.shape
+    for c in range(cols - 3):
+        for r in range(rows):
+            if board[r][c:c+4].all() == piece:
                 return True
-
-    # Check vertical locations for win
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][c] == piece:
+    for c in range(cols):
+        for r in range(rows - 3):
+            if board[r:r+4, c].all() == piece:
                 return True
-
-    # Check positively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and board[r + 3][c + 3] == piece:
+    for c in range(cols - 3):
+        for r in range(rows - 3):
+            if board[r:r+4, c:c+4].diagonal().all() == piece:
                 return True
-
-    # Check negatively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(3, ROW_COUNT):
-            if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and board[r - 3][c + 3] == piece:
+    for c in range(cols - 3):
+        for r in range(3, rows):
+            if np.fliplr(board[r-3:r+1, c:c+4]).diagonal().all() == piece:
                 return True
+    return False
 
-def is_draw(board):
-    return not np.any(board == 0)
-
-def draw_board(board):
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            color = LIGHT_BLUE if (r + c) % 2 == 0 else DARK_BLUE
-            pygame.draw.rect(screen, color, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
+def draw_board(board, colors, screen, squaresize, radius):
+    for c in range(board.shape[1]):
+        for r in range(board.shape[0]):
+            pygame.draw.rect(screen, (0, 0, 0), (c * squaresize, r * squaresize + squaresize, squaresize, squaresize))
+            pygame.draw.circle(screen, (173, 216, 230), (int(c * squaresize + squaresize / 2), int(r * squaresize + squaresize + squaresize / 2)), radius)
             if board[r][c] == 1:
-                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
+                pygame.draw.circle(screen, colors[0], (int(c * squaresize + squaresize / 2), int(squaresize * (board.shape[0] + 1) - r * squaresize - squaresize / 2)), radius)
             elif board[r][c] == 2:
-                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
+                pygame.draw.circle(screen, colors[1], (int(c * squaresize + squaresize / 2), int(squaresize * (board.shape[0] + 1) - r * squaresize - squaresize / 2)), radius)
     pygame.display.update()
 
-def reset_game():
-    global board, game_over, turn
-    board = create_board()
+def initialize_game():
+    pygame.init()
+    player1_name = input("Enter the name for Player 1: ")
+    player2_name = input("Enter the name for Player 2: ")
+    colors = []
+    colors.append(tuple(int(x) for x in input(f"Enter RGB for {player1_name} (e.g. 255 0 0): ").split()))
+    colors.append(tuple(int(x) for x in input(f"Enter RGB for {player2_name} (e.g. 0 0 255): ").split()))
+    columns = int(input("Enter the number of columns (7 is standard): "))
+    rows = 6  # standard row count
+
+    board = create_board(rows, columns)
     game_over = False
     turn = 0
-    draw_board(board)
 
-board = create_board()
-print_board(board)
-game_over = False
-turn = 0
+    squaresize = 100
+    width = columns * squaresize
+    height = (rows + 1) * squaresize
+    size = (width, height)
+    radius = int(squaresize / 2 - 5)
 
-pygame.init()
+    screen = pygame.display.set_mode(size)
+    myfont = pygame.font.SysFont("monospace", 75)
 
-SQUARESIZE = 100
+    return board, game_over, turn, colors, screen, squaresize, radius, myfont, player1_name, player2_name
 
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT + 1) * SQUARESIZE
+def main():
+    board, game_over, turn, colors, screen, squaresize, radius, myfont, player1_name, player2_name = initialize_game()
+    draw_board(board, colors, screen, squaresize, radius)
 
-size = (width, height)
+    while not game_over:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-RADIUS = int(SQUARESIZE / 2 - 5)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                posx = event.pos[0]
+                col = int(math.floor(posx / squaresize))
 
-screen = pygame.display.set_mode(size)
-pygame.display.update()
+                if is_valid_location(board, col):
+                    row = get_next_open_row(board, col)
+                    if row is not None:
+                        drop_piece(board, row, col, turn + 1)
+                        if winning_move(board, turn + 1):
+                            label = myfont.render(f"{player1_name if turn == 0 else player2_name} wins!", 1, colors[turn])
+                            screen.blit(label, (40, 10))
+                            game_over = True
 
-myfont = pygame.font.SysFont("monospace", 75)
+                        draw_board(board, colors, screen, squaresize, radius)
 
-draw_board(board)
-pygame.display.update()
+                        turn += 1
+                        turn = turn % 2
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+                        if not np.any(board == 0):
+                            label = myfont.render("Draw!", 1, (255, 255, 255))
+                            screen.blit(label, (40, 10))
+                            game_over = True
 
-        if event.type == pygame.MOUSEMOTION:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            posx = event.pos[0]
-            if turn == 0:
-                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
-            else:
-                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
-            pygame.display.update()
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            # Ask for Player Input
-            posx = event.pos[0]
-            col = int(math.floor(posx / SQUARESIZE))
-
-            if is_valid_location(board, col):
-                row = get_next_open_row(board, col)
-                drop_piece(board, row, col, turn + 1)
-
-                if winning_move(board, turn + 1):
-                    label = myfont.render(f"Player {turn + 1} wins", 1, RED if turn == 0 else YELLOW)
-                    screen.blit(label, (40, 10))
-                    game_over = True
-
-            print_board(board)
-            draw_board(board)
-
-            if is_draw(board) and not game_over:
-                label = myfont.render("Draw", 1, BLUE)
-                screen.blit(label, (40, 10))
-                game_over = True
-
-            if game_over:
-                pygame.time.wait(3000)
-                reset_game()
-
-            turn += 1
-            turn = turn % 2
-
+if __name__ == "__main__":
+    main()
