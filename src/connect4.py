@@ -2,6 +2,7 @@ import numpy as np
 import pygame
 import sys
 import math
+import pygame_menu
 
 # Colors
 BLUE = (0, 0, 255)
@@ -88,29 +89,23 @@ def draw_board(board):
                 pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
     pygame.display.update()
 
-def draw_buttons():
-    new_game_rect = pygame.draw.rect(screen, WHITE, (width // 2 - 1.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
-    restart_rect = pygame.draw.rect(screen, WHITE, (width // 2 - 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
-    exit_rect = pygame.draw.rect(screen, WHITE, (width // 2 + 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
-    
-    screen.blit(font.render('New Game', True, BLACK), (width // 2 - 1.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
-    screen.blit(font.render('Restart', True, BLACK), (width // 2 - 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
-    screen.blit(font.render('Exit', True, BLACK), (width // 2 + 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
-    
-    return new_game_rect, restart_rect, exit_rect
+def show_menu():
+    menu = pygame_menu.Menu('Game Over', 400, 300, theme=pygame_menu.themes.THEME_BLUE)
+    menu.add.button('New Game', new_game)
+    menu.add.button('Restart', restart)
+    menu.add.button('Exit', exit_game)
+    menu.mainloop(screen)
 
 def new_game():
     global board, game_over
     board = create_board()
     game_over = False
     draw_board(board)
-    draw_buttons()
 
 def restart():
     global board
     board = create_board()
     draw_board(board)
-    draw_buttons()
 
 def exit_game():
     pygame.quit()
@@ -125,7 +120,6 @@ board = create_board()
 game_over = False
 
 draw_board(board)
-new_game_rect, restart_rect, exit_rect = draw_buttons()
 
 myfont = pygame.font.SysFont("monospace", 75)
 
@@ -140,15 +134,6 @@ while True:
             posx = event.pos[0]
             posy = event.pos[1]
 
-            if new_game_rect.collidepoint(posx, posy):
-                new_game()
-
-            if restart_rect.collidepoint(posx, posy):
-                restart()
-
-            if exit_rect.collidepoint(posx, posy):
-                exit_game()
-
             if not game_over:
                 col = int(math.floor(posx / SQUARESIZE))
 
@@ -160,16 +145,18 @@ while True:
                         label = myfont.render(f"Player {turn + 1} wins!!", 1, RED if turn == 0 else YELLOW)
                         screen.blit(label, (40, 10))
                         game_over = True
+                        show_menu()
 
                     if is_draw(board):
                         label = myfont.render("Draw!!", 1, BLACK)
                         screen.blit(label, (40, 10))
                         game_over = True
+                        show_menu()
 
                     turn += 1
                     turn = turn % 2
 
                     draw_board(board)
-                    new_game_rect, restart_rect, exit_rect = draw_buttons()
 
     pygame.display.update()
+
