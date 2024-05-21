@@ -9,9 +9,14 @@ RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 DARK_BLUE = (0, 0, 139)
 LIGHT_BLUE = (173, 216, 230)
+WHITE = (255, 255, 255)
 
 ROW_COUNT = 6
 COLUMN_COUNT = 7
+
+# Button dimensions
+BUTTON_WIDTH = 100
+BUTTON_HEIGHT = 50
 
 def create_board():
     board = np.zeros((ROW_COUNT, COLUMN_COUNT))
@@ -65,121 +70,104 @@ def draw_board(board):
             color = LIGHT_BLUE if (r + c) % 2 == 0 else DARK_BLUE
             pygame.draw.rect(screen, color, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
             pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-
+    
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             if board[r][c] == 1:
                 pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
             elif board[r][c] == 2:
                 pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS, 5)
     pygame.display.update()
 
-def reset_game():
-    global board, game_over, turn
+def draw_buttons():
+    pygame.draw.rect(screen, WHITE, (width // 2 - 1.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    pygame.draw.rect(screen, WHITE, (width // 2 - 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    pygame.draw.rect(screen, WHITE, (width // 2 + 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    screen.blit(font.render('New Game', True, BLACK), (width // 2 - 1.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
+    screen.blit(font.render('Restart', True, BLACK), (width // 2 - 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
+    screen.blit(font.render('Exit', True, BLACK), (width // 2 + 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
+
+def new_game():
+    global board, game_over
     board = create_board()
     game_over = False
-    turn = 0
     draw_board(board)
+    draw_buttons()
 
-def draw_text_input(player_num, input_text):
-    pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-    label = myfont.render(f"Player {player_num} Name: {input_text}", 1, BLUE)
-    screen.blit(label, (40, 10))
-    pygame.display.update()
+def restart():
+    global board
+    board = create_board()
+    draw_board(board)
+    draw_buttons()
 
-board = create_board()
-print_board(board)
-game_over = False
-turn = 0
+def exit_game():
+    pygame.quit()
+    sys.exit()
 
 pygame.init()
 
 SQUARESIZE = 100
-
 width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT + 1) * SQUARESIZE
-
+height = (ROW_COUNT + 2) * SQUARESIZE
 size = (width, height)
-
 RADIUS = int(SQUARESIZE / 2 - 5)
 
 screen = pygame.display.set_mode(size)
-pygame.display.update()
+font = pygame.font.SysFont("monospace", 35)
+
+board = create_board()
+game_over = False
+
+draw_board(board)
+draw_buttons()
 
 myfont = pygame.font.SysFont("monospace", 75)
 
-# Player name input
-player_names = ["", ""]
-current_player = 0
-input_active = True
-input_text = ""
-
-while input_active:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN:
-                player_names[current_player] = input_text
-                current_player += 1
-                input_text = ""
-                if current_player >= 2:
-                    input_active = False
-            elif event.key == pygame.K_BACKSPACE:
-                input_text = input_text[:-1]
-            else:
-                input_text += event.unicode
-        draw_text_input(current_player + 1, input_text)
-
-# Start the game
-draw_board(board)
-pygame.display.update()
+turn = 0
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
             sys.exit()
 
-        if event.type == pygame.MOUSEMOTION:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            posx = event.pos[0]
-            if turn == 0:
-                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
-            else:
-                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
-            pygame.display.update()
-
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
-            # Ask for Player Input
             posx = event.pos[0]
-            col = int(math.floor(posx / SQUARESIZE))
+            posy = event.pos[1]
 
-            if is_valid_location(board, col):
-                row = get_next_open_row(board, col)
-                drop_piece(board, row, col, turn + 1)
+            # Check if New Game button is clicked
+            if width // 2 - 1.5 * BUTTON_WIDTH < posx < width // 2 - 0.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+                new_game()
 
-                if winning_move(board, turn + 1):
-                    label = myfont.render(f"{player_names[turn]} wins", 1, RED if turn == 0 else YELLOW)
-                    screen.blit(label, (40, 10))
-                    game_over = True
+            # Check if Restart button is clicked
+            elif width // 2 - 0.5 * BUTTON_WIDTH < posx < width // 2 + 0.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+                restart()
 
-            print_board(board)
-            draw_board(board)
+            # Check if Exit button is clicked
+            elif width // 2 + 0.5 * BUTTON_WIDTH < posx < width // 2 + 1.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+                exit_game()
 
-            if is_draw(board) and not game_over:
-                label = myfont.render("Draw", 1, BLUE)
-                screen.blit(label, (40, 10))
-                game_over = True
+            # Check for game play area clicks
+            if not game_over:
+                col = int(math.floor(posx / SQUARESIZE))
 
-            if game_over:
-                pygame.time.wait(3000)
-                reset_game()
+                if is_valid_location(board, col):
+                    row = get_next_open_row(board, col)
+                    drop_piece(board, row, col, turn + 1)
 
-            turn += 1
-            turn = turn % 2
+                    if winning_move(board, turn + 1):
+                        label = myfont.render(f"Player {turn + 1} wins!!", 1, RED if turn == 0 else YELLOW)
+                        screen.blit(label, (40, 10))
+                        game_over = True
 
+                    if is_draw(board):
+                        label = myfont.render("Draw!!", 1, BLACK)
+                        screen.blit(label, (40, 10))
+                        game_over = True
+
+                    turn += 1
+                    turn = turn % 2
+
+                    draw_board(board)
+                    draw_buttons()
+
+    pygame.display.update()
