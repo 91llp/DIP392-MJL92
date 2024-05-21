@@ -3,6 +3,7 @@ import pygame
 import sys
 import math
 
+# Colors
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -11,11 +12,19 @@ DARK_BLUE = (0, 0, 139)
 LIGHT_BLUE = (173, 216, 230)
 WHITE = (255, 255, 255)
 
+# Game dimensions
 ROW_COUNT = 6
 COLUMN_COUNT = 7
+SQUARESIZE = 100
+RADIUS = int(SQUARESIZE / 2 - 5)
+
+# Screen dimensions
+width = COLUMN_COUNT * SQUARESIZE
+height = (ROW_COUNT + 2) * SQUARESIZE
+size = (width, height)
 
 # Button dimensions
-BUTTON_WIDTH = 100
+BUTTON_WIDTH = 150
 BUTTON_HEIGHT = 50
 
 def create_board():
@@ -80,12 +89,15 @@ def draw_board(board):
     pygame.display.update()
 
 def draw_buttons():
-    pygame.draw.rect(screen, WHITE, (width // 2 - 1.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
-    pygame.draw.rect(screen, WHITE, (width // 2 - 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
-    pygame.draw.rect(screen, WHITE, (width // 2 + 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    new_game_rect = pygame.draw.rect(screen, WHITE, (width // 2 - 1.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    restart_rect = pygame.draw.rect(screen, WHITE, (width // 2 - 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    exit_rect = pygame.draw.rect(screen, WHITE, (width // 2 + 0.5 * BUTTON_WIDTH, height - BUTTON_HEIGHT - 20, BUTTON_WIDTH, BUTTON_HEIGHT))
+    
     screen.blit(font.render('New Game', True, BLACK), (width // 2 - 1.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
     screen.blit(font.render('Restart', True, BLACK), (width // 2 - 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
     screen.blit(font.render('Exit', True, BLACK), (width // 2 + 0.5 * BUTTON_WIDTH + 10, height - BUTTON_HEIGHT - 10))
+    
+    return new_game_rect, restart_rect, exit_rect
 
 def new_game():
     global board, game_over
@@ -106,12 +118,6 @@ def exit_game():
 
 pygame.init()
 
-SQUARESIZE = 100
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT + 2) * SQUARESIZE
-size = (width, height)
-RADIUS = int(SQUARESIZE / 2 - 5)
-
 screen = pygame.display.set_mode(size)
 font = pygame.font.SysFont("monospace", 35)
 
@@ -119,7 +125,7 @@ board = create_board()
 game_over = False
 
 draw_board(board)
-draw_buttons()
+new_game_rect, restart_rect, exit_rect = draw_buttons()
 
 myfont = pygame.font.SysFont("monospace", 75)
 
@@ -134,19 +140,15 @@ while True:
             posx = event.pos[0]
             posy = event.pos[1]
 
-            # Check if New Game button is clicked
-            if width // 2 - 1.5 * BUTTON_WIDTH < posx < width // 2 - 0.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+            if new_game_rect.collidepoint(posx, posy):
                 new_game()
 
-            # Check if Restart button is clicked
-            elif width // 2 - 0.5 * BUTTON_WIDTH < posx < width // 2 + 0.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+            if restart_rect.collidepoint(posx, posy):
                 restart()
 
-            # Check if Exit button is clicked
-            elif width // 2 + 0.5 * BUTTON_WIDTH < posx < width // 2 + 1.5 * BUTTON_WIDTH and height - BUTTON_HEIGHT - 20 < posy < height - 20:
+            if exit_rect.collidepoint(posx, posy):
                 exit_game()
 
-            # Check for game play area clicks
             if not game_over:
                 col = int(math.floor(posx / SQUARESIZE))
 
@@ -168,6 +170,6 @@ while True:
                     turn = turn % 2
 
                     draw_board(board)
-                    draw_buttons()
+                    new_game_rect, restart_rect, exit_rect = draw_buttons()
 
     pygame.display.update()
