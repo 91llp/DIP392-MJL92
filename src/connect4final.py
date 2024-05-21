@@ -77,10 +77,8 @@ class ConnectFourGame:
         self.draw_board()
         self.mainloop()
 
-    def create_board(self):
-        return np.zeros((self.rows, self.columns))
-
     def draw_board(self):
+        self.screen.fill((0, 0, 0))
         for c in range(self.columns):
             for r in range(self.rows):
                 pygame.draw.rect(self.screen, (0, 0, 255), (c * self.SQUARESIZE, (r + 1) * self.SQUARESIZE, self.SQUARESIZE, self.SQUARESIZE))
@@ -95,7 +93,9 @@ class ConnectFourGame:
         pygame.display.update()
 
     def mainloop(self):
-        while not self.game_over:
+        while True:
+            if self.game_over:
+                self.prompt_restart()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -112,20 +112,38 @@ class ConnectFourGame:
 
                             if self.check_win(self.turn + 1):
                                 self.game_over = True
-                                label = self.myfont.render(f"{self.player_names[self.turn]} wins!", 1, self.colors[self.turn])
-                                self.screen.blit(label, (40, 10))
-                                pygame.display.update()
-                                pygame.time.wait(3000)
+                                self.display_message(f"{self.player_names[self.turn]} wins!")
 
                             self.turn += 1
                             self.turn = self.turn % 2
 
                             if all(self.board[-1] != 0):  # Check for a draw
                                 self.game_over = True
-                                label = self.myfont.render("Draw!", 1, (255, 255, 255))
-                                self.screen.blit(label, (40, 10))
-                                pygame.display.update()
-                                pygame.time.wait(3000)
+                                self.display_message("Draw!")
+
+    def prompt_restart(self):
+        message_font = pygame.font.SysFont("monospace", 50)
+        message_text = message_font.render("Play again? Click to continue.", True, (255, 255, 255))
+        self.screen.blit(message_text, (50, self.height // 2))
+        pygame.display.update()
+
+        waiting_for_input = True
+        while waiting_for_input:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # Reset the game
+                    self.board = self.create_board()
+                    self.game_over = False
+                    self.turn = 0
+                    self.draw_board()
+                    waiting_for_input = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
 
     def is_valid_location(self, col):
         return self.board[self.rows-1][col] == 0
@@ -140,27 +158,32 @@ class ConnectFourGame:
         self.board[row][col] = piece
 
     def check_win(self, piece):
-        # Horizontal check
+        # Horizontal, vertical, and diagonal checks
         for c in range(self.columns-3):
             for r in range(self.rows):
                 if self.board[r][c] == piece and self.board[r][c+1] == piece and self.board[r][c+2] == piece and self.board[r][c+3] == piece:
                     return True
-        # Vertical check
         for c in range(self.columns):
             for r in range(self.rows-3):
                 if self.board[r][c] == piece and self.board[r+1][c] == piece and self.board[r+2][c] == piece and self.board[r+3][c] == piece:
                     return True
-        # Positive diagonal check
         for c in range(self.columns-3):
             for r in range(3, self.rows):
                 if self.board[r][c] == piece and self.board[r-1][c+1] == piece and self.board[r-2][c+2] == piece and self.board[r-3][c+3] == piece:
                     return True
-        # Negative diagonal check
         for c in range(self.columns-3):
             for r in range(self.rows-3):
                 if self.board[r][c] == piece and self.board[r+1][c+1] == piece and self.board[r+2][c+2] == piece and self.board[r+3][c+3] == piece:
                     return True
         return False
+
+    def display_message(self, message):
+        self.screen.fill((0, 0, 0))
+        font = pygame.font.SysFont("monospace", 75)
+        label = font.render(message, 1, (255, 255, 255))
+        self.screen.blit(label, (40, 10))
+        pygame.display.update()
+        pygame.time.wait(2000)
 
 if __name__ == "__main__":
     root = tk.Tk()
