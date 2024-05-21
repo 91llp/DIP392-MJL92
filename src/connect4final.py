@@ -1,115 +1,100 @@
+import tkinter as tk
+from tkinter import colorchooser, messagebox
 import numpy as np
 import pygame
 import sys
-import math
 
-def create_board(rows, columns):
-    return np.zeros((rows, columns))
+class ConnectFourSetup:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Connect Four Setup")
 
-def drop_piece(board, row, col, piece):
-    board[row][col] = piece
+        self.player_names = ['Player 1', 'Player 2']
+        self.colors = [(255, 0, 0), (255, 255, 0)]  # Default colors (red, yellow)
+        self.columns = 7
+        self.rows = 6
 
-def is_valid_location(board, col):
-    return board[-1][col] == 0
+        self.setup_ui()
 
-def get_next_open_row(board, col):
-    for r in range(board.shape[0]):
-        if board[r][col] == 0:
-            return r
-    return None
+    def setup_ui(self):
+        tk.Label(self.master, text="Player 1 Name:").grid(row=0, column=0)
+        self.p1_name = tk.Entry(self.master)
+        self.p1_name.grid(row=0, column=1)
+        self.p1_name.insert(0, 'Player 1')
 
-def print_board(board):
-    print(np.flip(board, 0))
+        tk.Label(self.master, text="Player 2 Name:").grid(row=1, column=0)
+        self.p2_name = tk.Entry(self.master)
+        self.p2_name.grid(row=1, column=1)
+        self.p2_name.insert(0, 'Player 2')
 
-def winning_move(board, piece):
-    # Horizontal, vertical, and diagonal checks
-    rows, cols = board.shape
-    for c in range(cols - 3):
-        for r in range(rows):
-            if board[r][c:c+4].all() == piece:
-                return True
-    for c in range(cols):
-        for r in range(rows - 3):
-            if board[r:r+4, c].all() == piece:
-                return True
-    for c in range(cols - 3):
-        for r in range(rows - 3):
-            if board[r:r+4, c:c+4].diagonal().all() == piece:
-                return True
-    for c in range(cols - 3):
-        for r in range(3, rows):
-            if np.fliplr(board[r-3:r+1, c:c+4]).diagonal().all() == piece:
-                return True
-    return False
+        tk.Button(self.master, text="Select Player 1 Color", command=lambda: self.choose_color(0)).grid(row=0, column=2)
+        tk.Button(self.master, text="Select Player 2 Color", command=lambda: self.choose_color(1)).grid(row=1, column=2)
 
-def draw_board(board, colors, screen, squaresize, radius):
-    for c in range(board.shape[1]):
-        for r in range(board.shape[0]):
-            pygame.draw.rect(screen, (0, 0, 0), (c * squaresize, r * squaresize + squaresize, squaresize, squaresize))
-            pygame.draw.circle(screen, (173, 216, 230), (int(c * squaresize + squaresize / 2), int(r * squaresize + squaresize + squaresize / 2)), radius)
-            if board[r][c] == 1:
-                pygame.draw.circle(screen, colors[0], (int(c * squaresize + squaresize / 2), int(squaresize * (board.shape[0] + 1) - r * squaresize - squaresize / 2)), radius)
-            elif board[r][c] == 2:
-                pygame.draw.circle(screen, colors[1], (int(c * squaresize + squaresize / 2), int(squaresize * (board.shape[0] + 1) - r * squaresize - squaresize / 2)), radius)
-    pygame.display.update()
+        tk.Label(self.master, text="Number of Columns:").grid(row=2, column=0)
+        self.column_entry = tk.Entry(self.master)
+        self.column_entry.grid(row=2, column=1)
+        self.column_entry.insert(0, '7')
 
-def initialize_game():
-    pygame.init()
-    player1_name = input("Enter the name for Player 1: ")
-    player2_name = input("Enter the name for Player 2: ")
-    colors = []
-    colors.append(tuple(int(x) for x in input(f"Enter RGB for {player1_name} (e.g. 255 0 0): ").split()))
-    colors.append(tuple(int(x) for x in input(f"Enter RGB for {player2_name} (e.g. 0 0 255): ").split()))
-    columns = int(input("Enter the number of columns (7 is standard): "))
-    rows = 6  # standard row count
+        tk.Button(self.master, text="Start Game", command=self.start_game).grid(row=3, column=1)
 
-    board = create_board(rows, columns)
-    game_over = False
-    turn = 0
+    def choose_color(self, player):
+        color, _ = colorchooser.askcolor()
+        if color:
+            self.colors[player] = tuple(int(c) for c in color)
 
-    squaresize = 100
-    width = columns * squaresize
-    height = (rows + 1) * squaresize
-    size = (width, height)
-    radius = int(squaresize / 2 - 5)
+    def start_game(self):
+        try:
+            columns = int(self.column_entry.get())
+            if columns < 4:
+                raise ValueError("Columns must be at least 4.")
+            self.columns = columns
+            self.player_names = [self.p1_name.get(), self.p2_name.get()]
+            self.master.quit()
+            self.master.destroy()
+            ConnectFourGame(self.rows, self.columns, self.player_names, self.colors)
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
 
-    screen = pygame.display.set_mode(size)
-    myfont = pygame.font.SysFont("monospace", 75)
+class ConnectFourGame:
+    def __init__(self, rows, columns, player_names, colors):
+        pygame.init()
+        self.rows = rows
+        self.columns = columns
+        self.player_names = player_names
+        self.colors = colors
+        self.board = np.zeros((rows, columns))
+        self.game_over = False
+        self.turn = 0
 
-    return board, game_over, turn, colors, screen, squaresize, radius, myfont, player1_name, player2_name
+        self.SQUARESIZE = 100
+        self.width = columns * self.SQUARESIZE
+        self.height = (rows + 1) * self.SQUARESIZE
+        self.size = (self.width, self.height)
+        self.screen = pygame.display.set_mode(self.size)
+        self.myfont = pygame.font.SysFont("monospace", 75)
 
-def main():
-    board, game_over, turn, colors, screen, squaresize, radius, myfont, player1_name, player2_name = initialize_game()
-    draw_board(board, colors, screen, squaresize, radius)
+        self.draw_board()
+        self.mainloop()
 
-    while not game_over:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+    def create_board(self):
+        return np.zeros((self.rows, self.columns))
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                posx = event.pos[0]
-                col = int(math.floor(posx / squaresize))
+    def draw_board(self):
+        for c in range(self.columns):
+            for r in range(self.rows):
+                pygame.draw.rect(self.screen, (0, 0, 255), (c * self.SQUARESIZE, r * self.SQUARESIZE + self.SQUARESIZE, self.SQUARESIZE, self.SQUARESIZE))
+                pygame.draw.circle(self.screen, (0, 0, 0), (int(c * self.SQUARESIZE + self.SQUARESIZE / 2), int(r * self.SQUARESIZE + self.SQUARESIZE + self.SQUARESIZE / 2)), self.SQUARESIZE // 2 - 5)
 
-                if is_valid_location(board, col):
-                    row = get_next_open_row(board, col)
-                    if row is not None:
-                        drop_piece(board, row, col, turn + 1)
-                        if winning_move(board, turn + 1):
-                            label = myfont.render(f"{player1_name if turn == 0 else player2_name} wins!", 1, colors[turn])
-                            screen.blit(label, (40, 10))
-                            game_over = True
+        pygame.display.update()
 
-                        draw_board(board, colors, screen, squaresize, radius)
-
-                        turn += 1
-                        turn = turn % 2
-
-                        if not np.any(board == 0):
-                            label = myfont.render("Draw!", 1, (255, 255, 255))
-                            screen.blit(label, (40, 10))
-                            game_over = True
+    def mainloop(self):
+        while not self.game_over:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = ConnectFourSetup(root)
+    root.mainloop()
