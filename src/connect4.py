@@ -1,162 +1,183 @@
+import tkinter as tk
+from tkinter import colorchooser, messagebox, simpledialog
 import numpy as np
 import pygame
 import sys
 import math
-import pygame_menu
 
-# Colors
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-DARK_BLUE = (0, 0, 139)
-LIGHT_BLUE = (173, 216, 230)
-WHITE = (255, 255, 255)
+class ConnectFourSetup:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Connect Four Setup")
 
-# Game dimensions
-ROW_COUNT = 6
-COLUMN_COUNT = 7
-SQUARESIZE = 100
-RADIUS = int(SQUARESIZE / 2 - 5)
+        self.player_names = ['Player 1', 'Player 2']
+        self.colors = [(255, 0, 0), (255, 255, 0)]  # Default colors (red, yellow)
+        self.columns = 7
+        self.rows = 6
 
-# Screen dimensions
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT + 2) * SQUARESIZE
-size = (width, height)
+        self.setup_ui()
 
-# Button dimensions
-BUTTON_WIDTH = 150
-BUTTON_HEIGHT = 50
+    def setup_ui(self):
+        tk.Label(self.master, text="Player 1 Name:").grid(row=0, column=0)
+        self.p1_name = tk.Entry(self.master)
+        self.p1_name.grid(row=0, column=1)
+        self.p1_name.insert(0, 'Player 1')
 
-def create_board():
-    board = np.zeros((ROW_COUNT, COLUMN_COUNT))
-    return board
+        tk.Label(self.master, text="Player 2 Name:").grid(row=1, column=0)
+        self.p2_name = tk.Entry(self.master)
+        self.p2_name.grid(row=1, column=1)
+        self.p2_name.insert(0, 'Player 2')
 
-def drop_piece(board, row, col, piece):
-    board[row][col] = piece
+        tk.Button(self.master, text="Select Player 1 Color", command=lambda: self.choose_color(0)).grid(row=0, column=2)
+        tk.Button(self.master, text="Select Player 2 Color", command=lambda: self.choose_color(1)).grid(row=1, column=2)
 
-def is_valid_location(board, col):
-    return board[ROW_COUNT - 1][col] == 0
+        tk.Label(self.master, text="Number of Columns:").grid(row=2, column=0)
+        self.column_entry = tk.Entry(self.master)
+        self.column_entry.grid(row=2, column=1)
+        self.column_entry.insert(0, '7')
 
-def get_next_open_row(board, col):
-    for r in range(ROW_COUNT):
-        if board[r][col] == 0:
-            return r
+        tk.Button(self.master, text="Start Game", command=self.start_game).grid(row=3, column=1)
 
-def print_board(board):
-    print(np.flip(board, 0))
+    def choose_color(self, player):
+        color, _ = colorchooser.askcolor()
+        if color:
+            self.colors[player] = tuple(int(c) for c in color)
 
-def winning_move(board, piece):
-    # Check horizontal locations for win
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT):
-            if board[r][c] == piece and board[r][c + 1] == piece and board[r][c + 2] == piece and board[r][c + 3] == piece:
-                return True
+    def start_game(self):
+        try:
+            columns = int(self.column_entry.get())
+            if columns < 4:
+                raise ValueError("Columns must be at least 4.")
+            self.columns = columns
+            self.player_names = [self.p1_name.get(), self.p2_name.get()]
+            self.master.quit()
+            self.master.destroy()
+            ConnectFourGame(self.rows, self.columns, self.player_names, self.colors)
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
 
-    # Check vertical locations for win
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c] == piece and board[r + 2][c] == piece and board[r + 3][c] == piece:
-                return True
+class ConnectFourGame:
+    def __init__(self, rows, columns, player_names, colors):
+        pygame.init()
+        self.rows = rows
+        self.columns = columns
+        self.player_names = player_names
+        self.colors = colors
+        self.board = np.zeros((rows, columns))
+        self.game_over = False
+        self.turn = 0
 
-    # Check positively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(ROW_COUNT - 3):
-            if board[r][c] == piece and board[r + 1][c + 1] == piece and board[r + 2][c + 2] == piece and board[r + 3][c + 3] == piece:
-                return True
+        self.SQUARESIZE = 100
+        self.width = columns * self.SQUARESIZE
+        self.height = rows * self.SQUARESIZE  # Adjust height to remove black area
+        self.size = (self.width, self.height)
+        self.screen = pygame.display.set_mode(self.size)
+        self.myfont = pygame.font.SysFont("comicsansms", 75)  # Using a more casual font
 
-    # Check negatively sloped diagonals
-    for c in range(COLUMN_COUNT - 3):
-        for r in range(3, ROW_COUNT):
-            if board[r][c] == piece and board[r - 1][c + 1] == piece and board[r - 2][c + 2] == piece and board[r - 3][c + 3] == piece:
-                return True
+        pygame.display.set_caption('Connect Four')
+        self.draw_board()
+        self.mainloop()
 
-def is_draw(board):
-    return not np.any(board == 0)
+    def draw_board(self):
+        self.screen.fill((0, 0, 0))  # Clear the screen each time to draw anew
+        for c in range(self.columns):
+            for r in range(self.rows):
+                pygame.draw.rect(self.screen, (30, 144, 255), (c * self.SQUARESIZE, r * self.SQUARESIZE, self.SQUARESIZE, self.SQUARESIZE))  # Adjusted
+                pygame.draw.circle(self.screen, (255, 255, 255), (int(c * self.SQUARESIZE + self.SQUARESIZE / 2), int(r * self.SQUARESIZE + self.SQUARESIZE / 2)), self.SQUARESIZE // 2 - 5)  # Adjusted
 
-def draw_board(board):
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            color = LIGHT_BLUE if (r + c) % 2 == 0 else DARK_BLUE
-            pygame.draw.rect(screen, color, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-    
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            if board[r][c] == 1:
-                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-            elif board[r][c] == 2:
-                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-    pygame.display.update()
+        for c in range(self.columns):
+            for r in range(self.rows):
+                if self.board[r][c] == 1:
+                    pygame.draw.circle(self.screen, self.colors[0], (int(c * self.SQUARESIZE + self.SQUARESIZE / 2), int(self.height - (r * self.SQUARESIZE + self.SQUARESIZE / 2))), self.SQUARESIZE // 2 - 5)
+                elif self.board[r][c] == 2:
+                    pygame.draw.circle(self.screen, self.colors[1], (int(c * self.SQUARESIZE + self.SQUARESIZE / 2), int(self.height - (r * self.SQUARESIZE + self.SQUARESIZE / 2))), self.SQUARESIZE // 2 - 5)
+        pygame.display.update()
 
-def show_menu():
-    menu = pygame_menu.Menu('Game Over', 400, 300, theme=pygame_menu.themes.THEME_BLUE)
-    menu.add.button('New Game', new_game)
-    menu.add.button('Restart', restart)
-    menu.add.button('Exit', exit_game)
-    menu.mainloop(screen)
+    def mainloop(self):
+        while True:
+            if self.game_over:
+                self.prompt_restart()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if not self.game_over:
+                        x_pos = event.pos[0]
+                        col = int(math.floor(x_pos / self.SQUARESIZE))
 
-def new_game():
-    global board, game_over
-    board = create_board()
-    game_over = False
-    draw_board(board)
+                        if self.is_valid_location(col):
+                            row = self.get_next_open_row(col)
+                            self.drop_piece(row, col, self.turn + 1)
+                            self.draw_board()
 
-def restart():
-    global board
-    board = create_board()
-    draw_board(board)
+                            if self.check_win(self.turn + 1):
+                                self.game_over = True
+                                self.display_message(f"{self.player_names[self.turn]} wins!")
 
-def exit_game():
-    pygame.quit()
-    sys.exit()
+                            self.turn += 1
+                            self.turn = self.turn % 2
 
-pygame.init()
+                            if all(self.board[-1] != 0):  # Check for a draw
+                                self.game_over = True
+                                self.display_message("Draw!")
 
-screen = pygame.display.set_mode(size)
-font = pygame.font.SysFont("monospace", 35)
-
-board = create_board()
-game_over = False
-
-draw_board(board)
-
-myfont = pygame.font.SysFont("monospace", 75)
-
-turn = 0
-
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    def prompt_restart(self):
+        self.game_over = True  # Ensure no further moves can be made
+        result = messagebox.askyesno("Game Over", "Would you like to play again?")
+        if result:
+            self.restart_game()
+        else:
+            pygame.quit()
             sys.exit()
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            posx = event.pos[0]
-            posy = event.pos[1]
+    def restart_game(self):
+        self.board = np.zeros((self.rows, self.columns))
+        self.game_over = False
+        self.turn = 0
+        self.draw_board()
 
-            if not game_over:
-                col = int(math.floor(posx / SQUARESIZE))
+    def is_valid_location(self, col):
+        return self.board[self.rows-1][col] == 0
 
-                if is_valid_location(board, col):
-                    row = get_next_open_row(board, col)
-                    drop_piece(board, row, col, turn + 1)
+    def get_next_open_row(self, col):
+        for r in range(self.rows):
+            if self.board[r][col] == 0:
+                return r
+        return None
 
-                    if winning_move(board, turn + 1):
-                        label = myfont.render(f"Player {turn + 1} wins!!", 1, RED if turn == 0 else YELLOW)
-                        screen.blit(label, (40, 10))
-                        game_over = True
-                        show_menu()
+    def drop_piece(self, row, col, piece):
+        self.board[row][col] = piece
 
-                    if is_draw(board):
-                        label = myfont.render("Draw!!", 1, BLACK)
-                        screen.blit(label, (40, 10))
-                        game_over = True
-                        show_menu()
+    def check_win(self, piece):
+        # Horizontal, vertical, and diagonal checks
+        for c in range(self.columns-3):
+            for r in range(self.rows):
+                if self.board[r][c] == piece and self.board[r][c+1] == piece and self.board[r][c+2] == piece and self.board[r][c+3] == piece:
+                    return True
+        for c in range(self.columns):
+            for r in range(self.rows-3):
+                if self.board[r][c] == piece and self.board[r+1][c] == piece and self.board[r+2][c] == piece and self.board[r+3][c] == piece:
+                    return True
+        for c in range(self.columns-3):
+            for r in range(3, self.rows):
+                if self.board[r][c] == piece and self.board[r-1][c+1] == piece and self.board[r-2][c+2] == piece and self.board[r-3][c+3] == piece:
+                    return True
+        for c in range(self.columns-3):
+            for r in range(self.rows-3):
+                if self.board[r][c] == piece and self.board[r+1][c+1] == piece and self.board[r+2][c+2] == piece and self.board[r+3][c+3] == piece:
+                    return True
+        return False
 
-                    turn += 1
-                    turn = turn % 2
+    def display_message(self, message):
+        self.screen.fill((0, 0, 0))
+        font = pygame.font.SysFont("comicsansms", 75)
+        label = font.render(message, 1, (255, 255, 255))
+        self.screen.blit(label, (40, 10))
+        pygame.display.update()
+        pygame.time.wait(2000)
 
-                    draw_board(board)
-
-    pygame.display.update()
-
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ConnectFourSetup(root)
+    root.mainloop()
